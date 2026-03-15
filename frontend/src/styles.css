@@ -1,0 +1,79 @@
+:root {
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: var(--tp-text);
+  background: var(--tp-bg);
+  --tp-bg: #f0ffdf;
+  --tp-surface: #ffffff;
+  --tp-surface-alt: #f6ffe9;
+  --tp-line: rgba(36, 49, 39, 0.12);
+  --tp-text: #1e2a20;
+  --tp-muted: #5e695f;
+  --tp-accent: #a8df8e;
+  --tp-accent-soft: #f0ffdf;
+  --tp-danger-soft: #ffd8df;
+  --tp-danger: #ffaab8;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--tp-bg);
+}
+
+#app {
+  min-height: 100vh;
+}
+
+.page {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--tp-muted);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.card {
+  padding: 1.25rem;
+  border-radius: 0.9rem;
+  background: color-mix(in srgb, var(--tp-surface) 92%, white);
+  border: 1px solid var(--tp-line);
+  box-shadow: 0 12px 28px rgba(36, 49, 39, 0.08);
+}
+
+.card strong {
+  display: block;
+  margin: 0.4rem 0;
+  font-size: 1.75rem;
+}
+
+.panel {
+  padding: 1.35rem;
+  border-radius: 1rem;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--tp-surface) 84%, white), color-mix(in srgb, var(--tp-surface) 94%, white)),
+    linear-gradient(135deg, color-mix(in srgb, var(--tp-accent-soft) 76%, white), color-mix(in srgb, var(--tp-danger-soft) 45%, white));
+  border: 1px solid var(--tp-line);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    0 14px 30px rgba(36, 49, 39, 0.08);
+}
