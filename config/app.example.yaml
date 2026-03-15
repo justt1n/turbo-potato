@@ -1,0 +1,17 @@
+app:
+  env: development
+  port: "8080"
+  timezone: Asia/Ho_Chi_Minh
+
+sheets:
+  spreadsheet_id: your-google-sheet-id
+  service_account_file: ./secrets/google-service-account.json
+
+ai:
+  provider: gemini
+  base_url: https://generativelanguage.googleapis.com
+  api_key_file: ./secrets/google-ai-api-key.txt
+  model: gemma-3-27b-it
+  prompt_file: ./prompts/chat_parser.default.txt
+  daily_report_prompt_file: ./prompts/daily_report.default.txt
+  monthly_report_prompt_file: ./prompts/monthly_report.default.txt

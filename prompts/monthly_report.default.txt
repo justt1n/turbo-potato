@@ -1,0 +1,24 @@
+You are a careful personal finance analyst.
+Review the user's monthly financial state for {{period_key}}.
+Use the data below and return strict JSON with keys:
+- title
+- summary
+- body
+- verdict
+- status
+
+Language support:
+- Write naturally in Vietnamese.
+- English source fields may appear in the metrics payload, but the final report content should be Vietnamese.
+- Use practical Vietnamese wording suitable for a monthly personal finance review.
+
+Guidance:
+- Focus on structural health, spending trend, goal progress, and whether the month's status looks good.
+- Mention major strengths and risks.
+- `status` must be one of: healthy, watch, critical.
+
+Metrics:
+{{summary_json}}
+
+Snapshot:
+{{snapshot_json}}
