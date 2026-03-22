@@ -25,6 +25,7 @@ export interface DashboardBaselineSeries {
 export interface DashboardSummary {
   sts: DashboardMetricValue;
   anomaly: DashboardMetricValue;
+  tar: DashboardMetricValue;
   goalPace: DashboardMetricValue;
   operatingPosture: {
     status: string;

@@ -22,6 +22,7 @@ Main architecture docs:
 - `docs/architecture/implementation_roadmap.md`
 - `docs/summary/python_fastapi_migration_plan.md`
 - `docs/summary/start_guide.md`
+- `docs/summary/user_guide.md`
 
 Legacy requirement docs remain under:
 
@@ -47,6 +48,9 @@ Migration plan:
 Python scaffold:
 
 - FastAPI app bootstrap in `backend/app/main.py`
+- CORS middleware is enabled in `backend/app/main.py`
+  - browser preflight `OPTIONS` requests now succeed for API routes
+  - this fixes frontend calls like `OPTIONS /api/v1/transactions` returning `405`
 - Health route in `backend/app/api/routes/health.py`
 - YAML + env config loader in `backend/app/core/config.py`
 - AI client layer in `backend/app/ai/client.py`
@@ -62,6 +66,7 @@ Python scaffold:
 - Google Sheets and memory repositories in `backend/app/infrastructure/`
 - Local virtualenv workflow in `backend/.venv`
 - Python packaging and test config in `backend/pyproject.toml`
+  - `httpx` is a runtime dependency and must remain in main dependencies for Docker images
 - Docker packaging:
   - `backend/Dockerfile`
   - `frontend/Dockerfile`
@@ -74,6 +79,8 @@ Example runtime config:
 - local machine template:
   - `config/local.yaml`
   - local config files are gitignored
+  - current user-preferred Docker path is `service_account_file: /app/config/metrickey.json`
+  - API key remains in `config/local.yaml`
 
 Prompt editing guide:
 
@@ -112,6 +119,7 @@ Current Python feature coverage:
   - `POST /api/v1/parsed-receipts/{receipt_id}/confirm`
   - `POST /api/v1/parsed-receipts/{receipt_id}/correct`
   - `POST /api/v1/parsed-receipts/{receipt_id}/undo`
+  - `POST /api/v1/integrations/google-chat/events`
 - config parity started:
   - `app.env`
   - `app.port`
@@ -128,6 +136,7 @@ Current Python feature coverage:
   - config loading
   - core domain behavior
   - health endpoint
+  - CORS preflight behavior
   - Sheets client behavior
   - Sheets bootstrap behavior
 
@@ -187,6 +196,7 @@ Other backend gaps:
 - no full inline correction editor in the UI yet
 - no live Google Sheets integration test yet
 - no deploy workflow yet that pushes images or deploys to a target environment
+- Google Chat webhook auth verification is not implemented yet; current route is functionally ready but not hardened
 
 ## Frontend status
 
@@ -208,13 +218,19 @@ Dashboard UI:
 - `frontend/src/features/dashboard/DashboardPage.vue`
 - `frontend/src/components/MetricRing.vue`
 - `frontend/src/components/BaselineMonitor.vue`
+- user-facing frontend copy is now translated to Vietnamese with diacritics across the main shell, dashboard, detail page, transactions, review, goals, and settings screens
+- backend payload keys remain unchanged; frontend uses local label mapping for Vietnamese display
 
 Dashboard now uses real backend API:
 
 - `frontend/src/api/dashboard.ts`
 - fetches `GET /api/v1/dashboard/summary`
 - fetches `GET /api/v1/dashboard/reports`
-- renders backend-driven STS, anomaly, goal pace, posture, baselines
+- renders backend-driven STS, anomaly, TAR, goal pace, posture, baselines
+- main dashboard stays cleaner and links to a dedicated detail view
+- detailed metric descriptions and deeper interpretation now live in `frontend/src/features/dashboard/DashboardDetailPage.vue`
+- baseline monitor now uses an HRV-style status bar treatment for each baseline series
+- dashboard metric labels, report states, posture labels, and baseline interpretations are shown in Vietnamese where possible
 - renders backend-driven daily report and monthly report
 - supports manual monthly report generation from the dashboard
 

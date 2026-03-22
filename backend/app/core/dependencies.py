@@ -6,6 +6,7 @@ from app.ai.client import AIClient, build_ai_client
 from app.core.config import Settings, get_settings
 from app.core.runtime import Clock, TransactionIDGenerator
 from app.domain.goals.service import GoalService
+from app.domain.integrations.google_chat import GoogleChatService
 from app.domain.ingestion.service import IngestionService
 from app.domain.ingestion.review_service import ParsedReceiptReviewService
 from app.domain.metrics.service import MetricsService
@@ -191,6 +192,11 @@ def get_parsed_receipt_review_service() -> ParsedReceiptReviewService:
     return ParsedReceiptReviewService(get_parsed_receipts_repository(), get_transaction_service())
 
 
+@lru_cache(maxsize=1)
+def get_google_chat_service() -> GoogleChatService:
+    return GoogleChatService(get_ingestion_service())
+
+
 def reset_dependency_caches() -> None:
     get_clock.cache_clear()
     get_transaction_id_generator.cache_clear()
@@ -210,3 +216,4 @@ def reset_dependency_caches() -> None:
     get_ingestion_service.cache_clear()
     get_reports_service.cache_clear()
     get_parsed_receipt_review_service.cache_clear()
+    get_google_chat_service.cache_clear()

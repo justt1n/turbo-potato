@@ -53,6 +53,7 @@ def test_dashboard_and_ingestion_routes() -> None:
     assert undo.json()["transaction"]["status"] == "reverted"
     summary = client.get("/api/v1/dashboard/summary")
     assert summary.status_code == 200
+    assert "tar" in summary.json()
     reports = client.get("/api/v1/dashboard/reports")
     assert reports.status_code == 200
     monthly = client.post("/api/v1/dashboard/reports/monthly", json={"trigger": "manual"})
@@ -87,3 +88,52 @@ def test_transaction_correct_and_undo() -> None:
     undone = client.post(f"/api/v1/transactions/{tx_id}/undo", json={"reason": "mist entry", "actor": "user"})
     assert undone.status_code == 200
     assert undone.json()["status"] == "reverted"
+
+
+def test_google_chat_event_message_creates_draft() -> None:
+    client = _client()
+    response = client.post(
+        "/api/v1/integrations/google-chat/events",
+        json={
+            "type": "MESSAGE",
+            "message": {"text": "an trua 120k #food"},
+            "user": {"displayName": "Admin User"},
+        },
+    )
+
+    assert response.status_code == 200
+    assert "Da tao draft giao dich" in response.json()["text"]
+
+    listed = client.get("/api/v1/parsed-receipts")
+    assert listed.status_code == 200
+    assert len(listed.json()["items"]) == 1
+    assert listed.json()["items"][0]["receipt"]["rawInput"] == "an trua 120k #food"
+
+
+def test_google_chat_event_slash_command_uses_argument_text() -> None:
+    client = _client()
+    response = client.post(
+        "/api/v1/integrations/google-chat/events",
+        json={
+            "type": "MESSAGE",
+            "message": {
+                "text": "/log bo sung 300k #gift",
+                "argumentText": "bo sung 300k #gift",
+                "slashCommand": {"commandId": "1"},
+            },
+        },
+    )
+
+    assert response.status_code == 200
+
+    listed = client.get("/api/v1/parsed-receipts")
+    assert listed.status_code == 200
+    assert listed.json()["items"][0]["receipt"]["rawInput"] == "bo sung 300k #gift"
+
+
+def test_google_chat_added_to_space_returns_intro_text() -> None:
+    client = _client()
+    response = client.post("/api/v1/integrations/google-chat/events", json={"type": "ADDED_TO_SPACE"})
+
+    assert response.status_code == 200
+    assert "Turbo Potato" in response.json()["text"]

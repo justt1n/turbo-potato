@@ -24,7 +24,7 @@ npm install
 
 ## 2. Create local config
 
-Create `config/local.yaml`.
+Create or edit `config/local.yaml`.
 
 This file is gitignored and intended for local or server-specific secrets.
 
@@ -38,12 +38,12 @@ app:
 
 sheets:
   spreadsheet_id: ""
-  service_account_file: ./secrets/google-service-account.json
+  service_account_file: /app/config/metrickey.json
 
 ai:
   provider: gemini
   base_url: https://generativelanguage.googleapis.com
-  api_key_file: ./secrets/google-ai-api-key.txt
+  api_key: "REPLACE_WITH_GOOGLE_AI_API_KEY"
   model: gemma-3-27b-it
   prompt_file: ./prompts/chat_parser.default.txt
   daily_report_prompt_file: ./prompts/daily_report.default.txt
@@ -55,18 +55,33 @@ Notes:
 - Leave `sheets.spreadsheet_id` empty if you want memory mode.
 - Prompt editing should happen in the `.txt` files under `prompts/`.
 - Most parsing input is expected to come from Google Chat style messages.
+- Service account should be provided from `config/metrickey.json`.
+- API key should be provided in `config/local.yaml`.
 
-## 3. Create secrets
+## 3. Fastest real run
 
-For real mode, create:
+Fill these values in `config/local.yaml`:
 
-- `secrets/google-service-account.json`
-- `secrets/google-ai-api-key.txt`
+- `sheets.spreadsheet_id`
+- `sheets.service_account_file`
+- `ai.api_key`
+
+Also place your Google service account JSON at:
+
+- `config/metrickey.json`
+
+Then run:
+
+```bash
+docker compose up --build
+```
+
+That is enough for a basic real run.
 
 If you only want memory mode for now:
 
-- you can skip both secret files
-- you can keep `spreadsheet_id` empty
+- keep `sheets.spreadsheet_id` empty
+- `service_account_file` and `ai.api_key` can stay as placeholders
 
 ## 4. Run backend
 
@@ -152,7 +167,7 @@ When you are ready for real persistence:
 
 1. Create a Google Sheet.
 2. Put its ID into `sheets.spreadsheet_id`.
-3. Share the sheet with the service account email from `google-service-account.json`.
+3. Share the sheet with the service account email inside `config/metrickey.json`.
 4. Start the backend.
 5. Call:
 
@@ -171,7 +186,7 @@ Then repeat the smoke test and confirm rows are written into:
 
 ## 8. Real Google AI mode
 
-When `ai.provider` is `gemini` and the API key file is present, the backend will use:
+When `ai.provider` is `gemini` and `ai.api_key` is filled, the backend will use:
 
 - Google AI API
 - model `gemma-3-27b-it`
@@ -184,7 +199,41 @@ Use real Google Chat-like messages during testing so you can tune:
 
 The response parser extracts JSON from model output with regex before parsing. The model can include extra prose around the JSON block, but cleaner prompt output is still better.
 
-## 9. Test commands
+## 9. Google Chat integration
+
+Backend webhook route:
+
+- `POST /api/v1/integrations/google-chat/events`
+
+Recommended Google Chat app setup:
+
+1. Create a Google Chat app in Google Cloud / Google Chat configuration.
+2. Configure it as an HTTP app.
+3. Point the app URL to:
+
+```text
+https://YOUR_PUBLIC_BASE_URL/api/v1/integrations/google-chat/events
+```
+
+For local Docker, this route exists at:
+
+```text
+http://127.0.0.1:8080/api/v1/integrations/google-chat/events
+```
+
+Supported event behavior:
+
+- `ADDED_TO_SPACE`: returns a short intro message
+- `MESSAGE`: parses the message and creates a draft transaction
+- slash-command style messages use `message.argumentText` when present
+
+Recommended Chat usage:
+
+- direct message the bot with text like `an trua 150k #food`
+- or use a slash command like `/log an trua 150k #food`
+- then open the `Review` page to confirm or correct the draft
+
+## 10. Test commands
 
 Backend:
 
@@ -213,7 +262,7 @@ docker build -f backend/Dockerfile .
 docker build -f frontend/Dockerfile .
 ```
 
-## 10. If something fails
+## 11. If something fails
 
 Quick checks:
 
@@ -222,9 +271,11 @@ Quick checks:
 - confirm frontend uses `VITE_API_BASE_URL=http://127.0.0.1:8080`
 - confirm prompt files exist under `prompts/`
 - confirm the sheet is shared with the service account email
-- confirm the Google AI API key file contains only the key text
+- confirm `config/metrickey.json` exists and contains a valid Google service account JSON
+- confirm `ai.api_key` is a real Google AI API key
+- confirm your Google Chat app points to `/api/v1/integrations/google-chat/events`
 
-## 11. Secret safety
+## 12. Secret safety
 
 Local secret paths are already ignored from git:
 
@@ -235,12 +286,12 @@ Local secret paths are already ignored from git:
 
 Recommended habit:
 
-- keep real API keys only in `secrets/`
-- keep real spreadsheet IDs and file paths only in `config/local.yaml`
+- keep real spreadsheet IDs and API keys only in `config/local.yaml`
+- keep the real Google service account JSON only in `config/metrickey.json`
 - do not place real keys in `config/app.example.yaml`
 - do not place real prompt content in YAML when prompt files are already used
 
-## 12. Recommended first real run
+## 13. Recommended first real run
 
 Best first real run order:
 

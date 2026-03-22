@@ -5,12 +5,12 @@ app:
 
 sheets:
   spreadsheet_id: your-google-sheet-id
-  service_account_file: ./secrets/google-service-account.json
+  service_account_file: /app/config/metrickey.json
 
 ai:
   provider: gemini
   base_url: https://generativelanguage.googleapis.com
-  api_key_file: ./secrets/google-ai-api-key.txt
+  api_key: REPLACE_WITH_GOOGLE_AI_API_KEY
   model: gemma-3-27b-it
   prompt_file: ./prompts/chat_parser.default.txt
   daily_report_prompt_file: ./prompts/daily_report.default.txt

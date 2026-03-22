@@ -35,6 +35,7 @@ class Summary(BaseModel):
 
     sts: MetricValue
     anomaly: MetricValue
+    tar: MetricValue
     goal_pace: MetricValue = Field(alias="goalPace")
     operating_posture: OperatingPosture = Field(alias="operatingPosture")
     baselines: list[BaselineSeries]

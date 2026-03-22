@@ -1,13 +1,12 @@
 <template>
   <section class="page">
     <header>
-      <p class="eyebrow">Settings</p>
-      <h2>Jars, thresholds, and Sheets configuration</h2>
+      <p class="eyebrow">Cài đặt</p>
+      <h2>Hũ, ngưỡng cảnh báo và cấu hình Sheets</h2>
     </header>
 
     <article class="card">
-      <p>Backend and sheet settings are planned for this area.</p>
+      <p>Khu vực này sẽ dùng để quản lý cài đặt hệ thống, Google Sheets và các tham số đánh giá.</p>
     </article>
   </section>
 </template>
-

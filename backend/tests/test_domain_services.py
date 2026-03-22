@@ -67,6 +67,7 @@ def test_goals_rules_and_metrics_summary() -> None:
     clock = FakeClock()
     tx_service = TransactionService(MemoryTransactionRepository(), MemoryAuditLogger(), FakeIDs(), clock)
     tx_service.create(CreateInput(type="OUT", amount=300000, occurredAt=clock.now()))
+    tx_service.create(CreateInput(type="OUT", amount=2_000_000, occurredAt=clock.now(), isFixed=True))
     tx_service.create(CreateInput(type="IN", amount=20_000_000, occurredAt=datetime(2026, 3, 10, 9, 0, 0, tzinfo=UTC)))
     tx_service.create(CreateInput(type="TRANSFER", amount=5_000_000, goalName="Mua xe SH", occurredAt=datetime(2026, 3, 12, 9, 0, 0, tzinfo=UTC)))
     goals = GoalService(MemoryGoalsRepository(), clock)
@@ -75,6 +76,7 @@ def test_goals_rules_and_metrics_summary() -> None:
     rules.create_fixed_cost_rule(CreateFixedCostRuleInput(name="Rent", expectedAmount=5_000_000, windowStartDay=1, windowEndDay=5, isActive=True))
     summary = MetricsService(tx_service, goals, rules, clock).summary()
     assert summary.sts.label == "STS Today"
+    assert summary.tar.label == "TAR"
     assert len(summary.baselines) == 3
     assert summary.operating_posture.status
 

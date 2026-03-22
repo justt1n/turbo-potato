@@ -1,24 +1,24 @@
 <template>
   <section class="page">
     <header>
-      <p class="eyebrow">Review</p>
-      <h2>Human-in-the-loop queue</h2>
+      <p class="eyebrow">Kiểm duyệt</p>
+      <h2>Hàng đợi xác nhận thủ công</h2>
     </header>
 
-    <p v-if="query.isLoading.value" class="panel">Loading parsed receipts...</p>
+    <p v-if="query.isLoading.value" class="panel">Đang tải các bản ghi cần duyệt...</p>
     <p v-else-if="query.isError.value" class="panel review-error">
       {{ (query.error.value as Error).message }}
     </p>
 
     <article v-else-if="items.length === 0" class="card">
-      <p>No parsed receipts waiting for review yet.</p>
+      <p>Chưa có bản ghi nào đang chờ kiểm duyệt.</p>
     </article>
 
     <div v-else class="review-grid">
       <article v-for="item in items" :key="item.receipt.id" class="panel review-card">
         <div class="review-head">
           <div>
-            <p class="eyebrow">Receipt {{ item.receipt.id }}</p>
+            <p class="eyebrow">Phiếu {{ item.receipt.id }}</p>
             <h3>{{ item.transaction?.note || item.receipt.rawInput }}</h3>
           </div>
           <span class="review-pill">{{ item.receipt.confidence }}</span>
@@ -28,16 +28,16 @@
 
         <dl class="review-meta">
           <div>
-            <dt>Regex amount</dt>
+            <dt>Số tiền từ regex</dt>
             <dd>{{ formatCurrency(item.receipt.regexAmount) }}</dd>
           </div>
           <div>
-            <dt>Jar</dt>
-            <dd>{{ item.transaction?.jarCode || "Pending" }}</dd>
+            <dt>Hũ</dt>
+            <dd>{{ item.transaction?.jarCode || "Đang chờ" }}</dd>
           </div>
           <div>
-            <dt>Status</dt>
-            <dd>{{ item.transaction?.status || "Missing tx" }}</dd>
+            <dt>Trạng thái</dt>
+            <dd>{{ transactionStatusLabel(item.transaction?.status) }}</dd>
           </div>
           <div>
             <dt>Prompt</dt>
@@ -49,13 +49,13 @@
 
         <div v-if="item.transaction?.status === 'draft'" class="review-actions">
           <button :disabled="isActionBusy(item.receipt.id)" type="button" @click="confirm(item.receipt.id)">
-            Confirm draft
+            Xác nhận bản nháp
           </button>
           <button :disabled="isActionBusy(item.receipt.id)" type="button" @click="toggleEditor(item)">
-            {{ editingId === item.receipt.id ? "Close editor" : "Correct draft" }}
+            {{ editingId === item.receipt.id ? "Đóng chỉnh sửa" : "Sửa bản nháp" }}
           </button>
           <button :disabled="isActionBusy(item.receipt.id)" class="danger-button" type="button" @click="undo(item.receipt.id)">
-            Revert draft
+            Hoàn tác bản nháp
           </button>
         </div>
 
@@ -65,53 +65,53 @@
           @submit.prevent="saveCorrection(item.receipt.id)"
         >
           <label>
-            <span>Type</span>
+            <span>Loại</span>
             <select v-model="editForm.type">
-              <option value="OUT">Expense</option>
-              <option value="IN">Income</option>
-              <option value="TRANSFER">Transfer</option>
+              <option value="OUT">Chi tiêu</option>
+              <option value="IN">Thu nhập</option>
+              <option value="TRANSFER">Chuyển tiền</option>
             </select>
           </label>
 
           <label>
-            <span>Amount</span>
+            <span>Số tiền</span>
             <input v-model.number="editForm.amount" min="1" required type="number" />
           </label>
 
           <label>
-            <span>Jar code</span>
+            <span>Mã hũ</span>
             <input v-model.trim="editForm.jarCode" placeholder="ThietYeu" />
           </label>
 
           <label>
-            <span>Goal name</span>
+            <span>Tên mục tiêu</span>
             <input v-model.trim="editForm.goalName" placeholder="Mua xe SH" />
           </label>
 
           <label>
-            <span>Account</span>
-            <input v-model.trim="editForm.accountName" placeholder="Wallet" />
+            <span>Tài khoản</span>
+            <input v-model.trim="editForm.accountName" placeholder="Ví" />
           </label>
 
           <label class="review-form-wide">
-            <span>Note</span>
+            <span>Ghi chú</span>
             <textarea v-model.trim="editForm.note" rows="3" />
           </label>
 
           <label class="checkbox">
             <input v-model="editForm.isFixed" type="checkbox" />
-            <span>Fixed cost</span>
+            <span>Chi phí cố định</span>
           </label>
 
           <label class="review-form-wide">
-            <span>Reason</span>
-            <input v-model.trim="editForm.reason" placeholder="Adjusted from review" />
+            <span>Lý do</span>
+            <input v-model.trim="editForm.reason" placeholder="Điều chỉnh sau khi kiểm duyệt" />
           </label>
 
           <div class="review-form-actions">
-            <button :disabled="isActionBusy(item.receipt.id)" type="submit">Save correction</button>
+            <button :disabled="isActionBusy(item.receipt.id)" type="submit">Lưu chỉnh sửa</button>
             <button :disabled="isActionBusy(item.receipt.id)" class="ghost-button" type="button" @click="clearEditor()">
-              Cancel
+              Hủy
             </button>
           </div>
         </form>
@@ -193,7 +193,7 @@ const correctMutation = useMutation({
 });
 
 function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-US").format(value) + " VND";
+  return new Intl.NumberFormat("vi-VN").format(value) + " VND";
 }
 
 function prettyJson(raw: string): string {
@@ -256,6 +256,19 @@ function saveCorrection(receiptId: string) {
     receiptId,
     input: { ...editForm.value },
   });
+}
+
+function transactionStatusLabel(status?: string): string {
+  switch (status) {
+    case "draft":
+      return "Bản nháp";
+    case "confirmed":
+      return "Đã xác nhận";
+    case "reverted":
+      return "Đã hoàn tác";
+    default:
+      return "Không tìm thấy giao dịch";
+  }
 }
 </script>
 

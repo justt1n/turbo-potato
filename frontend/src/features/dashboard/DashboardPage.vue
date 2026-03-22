@@ -2,27 +2,30 @@
   <section class="page">
     <header class="dashboard-header panel">
       <div>
-        <p class="eyebrow">Dashboard</p>
-        <h2>Personal finance cockpit</h2>
+        <p class="eyebrow">Tổng quan</p>
+        <h2>Buồng lái tài chính cá nhân</h2>
         <p class="lede">
-          A calmer Grafana-style surface for spending pressure, structural risk, and progress.
+          Màn hình tổng hợp để theo dõi áp lực chi tiêu, rủi ro cấu trúc và tiến độ tài chính.
         </p>
       </div>
 
-      <div class="status-strip">
-        <span class="status-pill" :class="pillClass(summary?.sts.status)">
-          {{ summary?.sts.label ?? "STS" }} {{ summary?.sts.status ?? "loading" }}
-        </span>
-        <span class="status-pill soft">
-          {{ summary?.baselines.length ?? 0 }} baselines tracked
-        </span>
-        <span class="status-pill warn">
-          {{ summary?.operatingPosture.status ?? "Waiting for snapshot" }}
-        </span>
+      <div class="status-cluster">
+        <RouterLink class="detail-link" to="/dashboard/detail">Mở trang chi tiết</RouterLink>
+        <div class="status-strip">
+          <span class="status-pill" :class="pillClass(summary?.sts.status)">
+            {{ metricLabel(summary?.sts.label ?? "STS") }} {{ statusLabel(summary?.sts.status ?? "loading") }}
+          </span>
+          <span class="status-pill soft">
+            {{ summary?.baselines.length ?? 0 }} đường chuẩn đang theo dõi
+          </span>
+          <span class="status-pill warn">
+            {{ postureStatusLabel(summary?.operatingPosture.status) }}
+          </span>
+        </div>
       </div>
     </header>
 
-    <p v-if="summaryQuery.isLoading.value || reportsQuery.isLoading.value" class="panel state-panel">Loading dashboard data...</p>
+    <p v-if="summaryQuery.isLoading.value || reportsQuery.isLoading.value" class="panel state-panel">Đang tải dữ liệu tổng quan...</p>
     <p v-else-if="summaryQuery.isError.value || reportsQuery.isError.value" class="panel state-panel state-error">
       {{ ((summaryQuery.error.value ?? reportsQuery.error.value) as Error).message }}
     </p>
@@ -30,25 +33,33 @@
     <template v-else-if="summary">
       <div class="metrics-grid">
         <MetricRing
-          :label="summary.sts.label"
+          :label="metricLabel(summary.sts.label)"
           :value="summary.sts.value"
-          :caption="summary.sts.caption"
+          :caption="metricCaption(summary.sts.label, summary.sts.caption)"
           :progress="summary.sts.progress"
           :tone="toneFromStatus(summary.sts.status)"
           :glow="glowFromStatus(summary.sts.status)"
         />
         <MetricRing
-          :label="summary.anomaly.label"
+          :label="metricLabel(summary.anomaly.label)"
           :value="summary.anomaly.value"
-          :caption="summary.anomaly.caption"
+          :caption="metricCaption(summary.anomaly.label, summary.anomaly.caption)"
           :progress="summary.anomaly.progress"
           :tone="toneFromStatus(summary.anomaly.status)"
           :glow="glowFromStatus(summary.anomaly.status)"
         />
         <MetricRing
-          :label="summary.goalPace.label"
+          :label="metricLabel(summary.tar.label)"
+          :value="summary.tar.value"
+          :caption="metricCaption(summary.tar.label, summary.tar.caption)"
+          :progress="summary.tar.progress"
+          :tone="toneFromStatus(summary.tar.status)"
+          :glow="glowFromStatus(summary.tar.status)"
+        />
+        <MetricRing
+          :label="metricLabel(summary.goalPace.label)"
           :value="summary.goalPace.value"
-          :caption="summary.goalPace.caption"
+          :caption="metricCaption(summary.goalPace.label, summary.goalPace.caption)"
           :progress="summary.goalPace.progress"
           :tone="toneFromStatus(summary.goalPace.status)"
           :glow="glowFromStatus(summary.goalPace.status)"
@@ -57,23 +68,23 @@
 
       <div class="dashboard-columns">
         <BaselineMonitor
-          title="Baseline monitor"
-          subtitle="Track multiple baselines at once"
+          title="Bảng theo dõi đường chuẩn"
+          subtitle="Góc nhìn kiểu Garmin HRV cho những nhịp tài chính quan trọng"
           :series-list="baselineSeries"
         />
 
         <article class="panel summary-panel">
           <div class="panel-head">
             <div>
-              <p class="eyebrow">Snapshot</p>
-              <h3>Operating posture</h3>
+              <p class="eyebrow">Ảnh chụp nhanh</p>
+              <h3>Thế vận hành</h3>
             </div>
-            <span class="panel-kpi">{{ summary.operatingPosture.status }}</span>
+            <span class="panel-kpi">{{ postureStatusLabel(summary.operatingPosture.status) }}</span>
           </div>
 
           <ul class="summary-list">
             <li v-for="item in summary.operatingPosture.items" :key="item.label">
-              <span>{{ item.label }}</span>
+              <span>{{ postureItemLabel(item.label) }}</span>
               <strong>{{ item.value }}</strong>
             </li>
           </ul>
@@ -84,11 +95,11 @@
         <article class="panel report-panel">
           <div class="panel-head">
             <div>
-              <p class="eyebrow">Daily report</p>
-              <h3>{{ reports?.daily.title ?? "Daily financial status" }}</h3>
+              <p class="eyebrow">Báo cáo ngày</p>
+              <h3>{{ reports?.daily.title ?? "Tình trạng tài chính trong ngày" }}</h3>
             </div>
             <span class="status-pill" :class="pillClass(reports?.daily.status)">
-              {{ reports?.daily.status ?? "waiting" }}
+              {{ reportStatusLabel(reports?.daily.status) }}
             </span>
           </div>
           <p class="report-summary">{{ reports?.daily.summary }}</p>
@@ -101,19 +112,19 @@
         <article class="panel report-panel">
           <div class="panel-head">
             <div>
-              <p class="eyebrow">Monthly report</p>
-              <h3>{{ reports?.monthly?.title ?? "Monthly report not generated yet" }}</h3>
+              <p class="eyebrow">Báo cáo tháng</p>
+              <h3>{{ reports?.monthly?.title ?? "Chưa tạo báo cáo tháng" }}</h3>
             </div>
             <button class="action-button" :disabled="monthlyMutation.isPending.value" @click="generateMonthly">
-              {{ monthlyMutation.isPending.value ? "Generating..." : "Generate now" }}
+              {{ monthlyMutation.isPending.value ? "Đang tạo..." : "Tạo ngay" }}
             </button>
           </div>
           <p class="report-summary">
-            {{ reports?.monthly?.summary ?? "Generated on demand, and auto-created on the first day of each month." }}
+            {{ reports?.monthly?.summary ?? "Báo cáo tháng được tạo khi bạn yêu cầu, và tự động tạo vào ngày đầu tiên của tháng." }}
           </p>
-          <pre class="report-body">{{ reports?.monthly?.body ?? "No monthly report available yet." }}</pre>
+          <pre class="report-body">{{ reports?.monthly?.body ?? "Chưa có báo cáo tháng." }}</pre>
           <p class="report-meta">
-            {{ reports?.monthly?.verdict ?? "Ask for a monthly analysis when you want a full structural review." }}
+            {{ reports?.monthly?.verdict ?? "Hãy tạo báo cáo tháng khi bạn muốn xem đánh giá cấu trúc tổng thể." }}
           </p>
         </article>
       </div>
@@ -123,6 +134,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
+import { RouterLink } from "vue-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import { generateMonthlyReport, getDashboardReports, getDashboardSummary } from "@/api/dashboard";
 import BaselineMonitor from "@/components/BaselineMonitor.vue";
@@ -152,8 +164,8 @@ const reports = computed(() => reportsQuery.data.value);
 
 const baselineSeries = computed(() =>
   (summary.value?.baselines ?? []).map((series) => ({
-    label: series.label,
-    description: series.description,
+    label: baselineLabel(series.label),
+    description: baselineDescription(series.label, series.description),
     values: series.values,
     current: series.current,
     delta: series.delta,
@@ -200,10 +212,128 @@ function generateMonthly(): void {
 
 function formatTimestamp(value?: string): string {
   if (!value) {
-    return "Not generated yet";
+    return "Chưa tạo";
   }
 
-  return new Date(value).toLocaleString();
+  return new Date(value).toLocaleString("vi-VN");
+}
+
+function metricLabel(label: string): string {
+  switch (label) {
+    case "Goal Pace":
+      return "Tốc độ mục tiêu";
+    case "Anomaly":
+      return "Bất thường";
+    case "TAR":
+      return "TAR";
+    case "STS":
+      return "STS";
+    default:
+      return label;
+  }
+}
+
+function metricCaption(label: string, fallback: string): string {
+  switch (label) {
+    case "STS":
+      return "Mức chi an toàn mỗi ngày còn lại trong tháng này.";
+    case "Anomaly":
+      return "Độ lệch của chi tiêu hiện tại so với hành vi gần đây.";
+    case "TAR":
+      return "Chất lượng tích lũy sau khi trừ chi tiêu và dòng tiền mục tiêu.";
+    case "Goal Pace":
+      return "Tiến độ hiện tại hướng tới mục tiêu đang theo dõi.";
+    default:
+      return fallback;
+  }
+}
+
+function baselineLabel(label: string): string {
+  switch (label) {
+    case "Variable spend":
+      return "Chi tiêu biến đổi";
+    case "Fixed-cost load":
+      return "Tải chi phí cố định";
+    case "Goal velocity":
+      return "Tốc độ tích lũy";
+    default:
+      return label;
+  }
+}
+
+function baselineDescription(label: string, fallback: string): string {
+  switch (label) {
+    case "Variable spend":
+      return "Nhịp chi tiêu linh hoạt của bạn so với đường chuẩn gần đây.";
+    case "Fixed-cost load":
+      return "Mức độ chi phí cố định đang ép lên dòng tiền hiện tại.";
+    case "Goal velocity":
+      return "Động lực nạp tiền vào các mục tiêu trong thời gian gần đây.";
+    default:
+      return fallback;
+  }
+}
+
+function postureItemLabel(label: string): string {
+  switch (label) {
+    case "Runway":
+      return "Dự phòng";
+    case "Fixed-cost load":
+      return "Tải chi phí cố định";
+    case "Goal velocity":
+      return "Tốc độ tích lũy";
+    case "ETA":
+      return "Dự kiến cán đích";
+    default:
+      return label;
+  }
+}
+
+function postureStatusLabel(status?: string): string {
+  switch (status) {
+    case "Stable":
+      return "Ổn định";
+    case "Moderate risk":
+      return "Rủi ro vừa";
+    case "High alert":
+      return "Cảnh báo cao";
+    case "waiting":
+    case undefined:
+      return "Đang chờ dữ liệu";
+    default:
+      return status;
+  }
+}
+
+function statusLabel(status: string): string {
+  switch (status) {
+    case "loading":
+      return "đang tải";
+    case "healthy":
+      return "tốt";
+    case "warning":
+      return "cần theo dõi";
+    case "critical":
+      return "nguy cơ";
+    default:
+      return status;
+  }
+}
+
+function reportStatusLabel(status?: string): string {
+  switch (status) {
+    case "healthy":
+      return "tốt";
+    case "warning":
+      return "cần theo dõi";
+    case "critical":
+      return "nguy cơ";
+    case "waiting":
+    case undefined:
+      return "đang chờ";
+    default:
+      return status;
+  }
 }
 </script>
 
@@ -228,11 +358,31 @@ function formatTimestamp(value?: string): string {
   color: var(--tp-muted);
 }
 
+.status-cluster {
+  display: grid;
+  justify-items: end;
+  gap: 0.85rem;
+}
+
 .status-strip {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0.65rem;
+}
+
+.detail-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.8rem 1rem;
+  border-radius: 0.7rem;
+  background: var(--tp-text);
+  color: #f7faf7;
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .status-pill {
@@ -347,41 +497,44 @@ function formatTimestamp(value?: string): string {
 
 .report-body {
   margin: 0;
-  padding: 1rem;
-  border-radius: 0.8rem;
-  border: 1px solid var(--tp-line);
-  background: color-mix(in srgb, var(--tp-surface) 88%, white);
-  font: inherit;
-  color: var(--tp-muted);
+  min-height: 11rem;
   white-space: pre-wrap;
+  color: var(--tp-muted);
+  font: 0.93rem/1.55 "IBM Plex Mono", monospace;
 }
 
 .report-meta {
-  margin: 1rem 0 0;
+  margin-top: 1rem;
   color: var(--tp-muted);
 }
 
 .action-button {
-  border: 1px solid var(--tp-line);
+  border: 0;
+  border-radius: 0.75rem;
+  padding: 0.8rem 1rem;
   background: var(--tp-text);
-  color: white;
-  border-radius: 0.6rem;
-  padding: 0.75rem 1rem;
+  color: #f7faf7;
   font: inherit;
   font-weight: 700;
   cursor: pointer;
 }
 
 .action-button:disabled {
-  cursor: progress;
-  opacity: 0.7;
+  opacity: 0.6;
+  cursor: wait;
 }
 
-@media (max-width: 980px) {
-  .dashboard-header,
+@media (max-width: 1080px) {
+  .dashboard-header {
+    flex-direction: column;
+  }
+
   .dashboard-columns {
     grid-template-columns: 1fr;
-    display: grid;
+  }
+
+  .status-cluster {
+    justify-items: start;
   }
 
   .status-strip {

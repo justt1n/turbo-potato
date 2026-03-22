@@ -1,55 +1,55 @@
 <template>
   <section class="page">
     <header>
-      <p class="eyebrow">Transactions</p>
-      <h2>Ledger foundation</h2>
+      <p class="eyebrow">Giao dịch</p>
+      <h2>Sổ cái giao dịch</h2>
     </header>
 
     <div class="layout">
       <article class="card">
-        <h3>Add transaction</h3>
+        <h3>Thêm giao dịch</h3>
         <form class="form" @submit.prevent="submit">
           <label>
-            <span>Type</span>
+            <span>Loại</span>
             <select v-model="form.type">
-              <option value="OUT">Expense</option>
-              <option value="IN">Income</option>
-              <option value="TRANSFER">Transfer</option>
+              <option value="OUT">Chi tiêu</option>
+              <option value="IN">Thu nhập</option>
+              <option value="TRANSFER">Chuyển tiền</option>
             </select>
           </label>
 
           <label>
-            <span>Amount</span>
+            <span>Số tiền</span>
             <input v-model.number="form.amount" type="number" min="1" required />
           </label>
 
           <label>
-            <span>Jar code</span>
+            <span>Mã hũ</span>
             <input v-model.trim="form.jarCode" placeholder="HuongThu" />
           </label>
 
           <label>
-            <span>Goal name</span>
+            <span>Tên mục tiêu</span>
             <input v-model.trim="form.goalName" placeholder="Mua xe SH" />
           </label>
 
           <label>
-            <span>Account</span>
-            <input v-model.trim="form.accountName" placeholder="Wallet" />
+            <span>Tài khoản</span>
+            <input v-model.trim="form.accountName" placeholder="Ví" />
           </label>
 
           <label>
-            <span>Note</span>
-            <textarea v-model.trim="form.note" rows="3" placeholder="Quick note" />
+            <span>Ghi chú</span>
+            <textarea v-model.trim="form.note" rows="3" placeholder="Ghi chú nhanh" />
           </label>
 
           <label class="checkbox">
             <input v-model="form.isFixed" type="checkbox" />
-            <span>Fixed cost</span>
+            <span>Chi phí cố định</span>
           </label>
 
           <button :disabled="mutation.isPending.value" type="submit">
-            {{ mutation.isPending.value ? "Saving..." : "Create transaction" }}
+            {{ mutation.isPending.value ? "Đang lưu..." : "Tạo giao dịch" }}
           </button>
         </form>
 
@@ -58,19 +58,19 @@
 
       <article class="card">
         <div class="section-head">
-          <h3>Recent transactions</h3>
-          <button @click="refetch">Refresh</button>
+          <h3>Giao dịch gần đây</h3>
+          <button @click="refetch">Tải lại</button>
         </div>
 
-        <p v-if="query.isLoading.value">Loading transactions...</p>
+        <p v-if="query.isLoading.value">Đang tải giao dịch...</p>
         <p v-else-if="query.isError.value" class="error">
           {{ (query.error.value as Error).message }}
         </p>
         <ul v-else class="list">
           <li v-for="item in query.data.value?.items ?? []" :key="item.id">
             <div>
-              <strong>{{ item.type }}</strong>
-              <span>{{ item.note || "No note" }}</span>
+              <strong>{{ typeLabel(item.type) }}</strong>
+              <span>{{ item.note || "Không có ghi chú" }}</span>
             </div>
             <div class="meta">
               <span>{{ formatCurrency(item.amount, item.currency) }}</span>
@@ -117,7 +117,7 @@ const mutation = useMutation({
     await query.refetch();
   },
   onError: (error) => {
-    errorMessage.value = error instanceof Error ? error.message : "Create transaction failed";
+    errorMessage.value = error instanceof Error ? error.message : "Tạo giao dịch thất bại";
   },
 });
 
@@ -130,6 +130,17 @@ function submit() {
   mutation.mutate({
     ...form,
   });
+}
+
+function typeLabel(type: "IN" | "OUT" | "TRANSFER"): string {
+  switch (type) {
+    case "IN":
+      return "Thu";
+    case "OUT":
+      return "Chi";
+    case "TRANSFER":
+      return "Chuyển";
+  }
 }
 </script>
 

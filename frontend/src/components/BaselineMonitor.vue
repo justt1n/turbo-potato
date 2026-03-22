@@ -2,7 +2,7 @@
   <article class="panel baseline-panel">
     <div class="panel-head">
       <div>
-        <p class="eyebrow">Baselines</p>
+        <p class="eyebrow">Đường chuẩn</p>
         <h3>{{ title }}</h3>
       </div>
       <span class="panel-kpi">{{ subtitle }}</span>
@@ -43,9 +43,22 @@
 
         <div class="baseline-stats">
           <span>{{ series.current }}</span>
-          <small :class="series.delta.startsWith('-') ? 'delta-good' : 'delta-bad'">
+          <small :class="deltaClass(series)">
             {{ series.delta }}
           </small>
+        </div>
+
+        <div class="baseline-status-shell">
+          <div class="baseline-status-copy">
+            <strong>{{ statusLabel(series) }}</strong>
+            <span>{{ statusDescription(series) }}</span>
+          </div>
+          <div class="baseline-status-track" aria-hidden="true">
+            <span class="baseline-zone low"></span>
+            <span class="baseline-zone balanced"></span>
+            <span class="baseline-zone high"></span>
+            <span class="baseline-marker" :style="{ left: markerOffset(series) }"></span>
+          </div>
         </div>
       </article>
     </div>
@@ -72,6 +85,72 @@ const props = defineProps<{
 }>();
 
 const gridLines = computed(() => [20, 80, 140, 200]);
+
+function latestValue(series: BaselineSeries): number {
+  return series.values.at(-1) ?? 0;
+}
+
+function previousValue(series: BaselineSeries): number {
+  return series.values.length > 1 ? series.values[series.values.length - 2] : latestValue(series);
+}
+
+function markerOffset(series: BaselineSeries): string {
+  return `${Math.min(100, Math.max(0, latestValue(series)))}%`;
+}
+
+function isLowerBetter(series: BaselineSeries): boolean {
+  return series.label !== "Tốc độ tích lũy";
+}
+
+function deltaClass(series: BaselineSeries): string {
+  const rising = latestValue(series) > previousValue(series);
+  if (isLowerBetter(series)) {
+    return rising ? "delta-bad" : "delta-good";
+  }
+  return rising ? "delta-good" : "delta-bad";
+}
+
+function statusLabel(series: BaselineSeries): string {
+  const current = latestValue(series);
+  if (series.label === "Tốc độ tích lũy") {
+    if (current >= 67) {
+      return "Rất tốt";
+    }
+    if (current >= 34) {
+      return "Đang lên";
+    }
+    return "Chậm";
+  }
+
+  if (current <= 33) {
+    return "Ổn định";
+  }
+  if (current <= 66) {
+    return "Cần theo dõi";
+  }
+  return "Căng cao";
+}
+
+function statusDescription(series: BaselineSeries): string {
+  const label = statusLabel(series);
+  if (series.label === "Tốc độ tích lũy") {
+    if (label === "Rất tốt") {
+      return "Tốc độ bổ sung cho mục tiêu đang vượt đường chuẩn gần đây.";
+    }
+    if (label === "Đang lên") {
+      return "Dòng chuyển vào mục tiêu đang tăng, nhưng vẫn còn dư địa để mạnh hơn.";
+    }
+    return "Tốc độ tích lũy đang chậm hơn nhịp gần đây và cần chú ý.";
+  }
+
+  if (label === "Ổn định") {
+    return "Mức hiện tại nằm trong vùng vận hành dễ chịu so với đường chuẩn gần đây.";
+  }
+  if (label === "Cần theo dõi") {
+    return "Xu hướng này cao hơn vùng bình ổn và nên theo dõi thêm.";
+  }
+  return "Xu hướng này đang nóng hơn rõ so với đường chuẩn gần đây.";
+}
 </script>
 
 <style scoped>
@@ -115,6 +194,7 @@ const gridLines = computed(() => [20, 80, 140, 200]);
 
 .baseline-row {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 1rem;
   align-items: center;
@@ -152,6 +232,7 @@ const gridLines = computed(() => [20, 80, 140, 200]);
 
 .baseline-stats {
   text-align: right;
+  margin-left: auto;
 }
 
 .baseline-stats span {
@@ -163,6 +244,65 @@ const gridLines = computed(() => [20, 80, 140, 200]);
 .baseline-stats small {
   margin-top: 0.2rem;
   font-size: 0.8rem;
+}
+
+.baseline-status-shell {
+  display: grid;
+  gap: 0.55rem;
+  width: 100%;
+}
+
+.baseline-status-copy {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: baseline;
+}
+
+.baseline-status-copy strong {
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.baseline-status-copy span {
+  color: var(--tp-muted);
+  font-size: 0.84rem;
+  text-align: right;
+}
+
+.baseline-status-track {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  height: 0.85rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tp-surface) 80%, white);
+  border: 1px solid var(--tp-line);
+}
+
+.baseline-zone.low {
+  background: color-mix(in srgb, var(--tp-accent) 72%, white);
+}
+
+.baseline-zone.balanced {
+  background: color-mix(in srgb, var(--tp-accent-soft) 74%, #fff2c2);
+}
+
+.baseline-zone.high {
+  background: color-mix(in srgb, var(--tp-danger-soft) 78%, white);
+}
+
+.baseline-marker {
+  position: absolute;
+  top: -0.15rem;
+  bottom: -0.15rem;
+  width: 0.5rem;
+  margin-left: -0.25rem;
+  border-radius: 999px;
+  background: var(--tp-text);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--tp-surface) 88%, white);
 }
 
 .delta-good {
@@ -184,4 +324,3 @@ const gridLines = computed(() => [20, 80, 140, 200]);
   }
 }
 </style>
-

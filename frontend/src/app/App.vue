@@ -5,15 +5,15 @@
         <span class="brand-mark"></span>
         <div>
           <p>Turbo Potato</p>
-          <small>Personal Life OS</small>
+          <small>Trung tâm tài chính cá nhân</small>
         </div>
       </div>
       <nav>
-        <RouterLink to="/">Dashboard</RouterLink>
-        <RouterLink to="/transactions">Transactions</RouterLink>
-        <RouterLink to="/review">Review</RouterLink>
-        <RouterLink to="/goals">Goals</RouterLink>
-        <RouterLink to="/settings">Settings</RouterLink>
+        <RouterLink to="/">Tổng quan</RouterLink>
+        <RouterLink to="/transactions">Giao dịch</RouterLink>
+        <RouterLink to="/review">Kiểm duyệt</RouterLink>
+        <RouterLink to="/goals">Mục tiêu</RouterLink>
+        <RouterLink to="/settings">Cài đặt</RouterLink>
       </nav>
     </aside>
 

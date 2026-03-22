@@ -1,13 +1,12 @@
 <template>
   <section class="page">
     <header>
-      <p class="eyebrow">Goals</p>
-      <h2>Progress and ETA</h2>
+      <p class="eyebrow">Mục tiêu</p>
+      <h2>Tiến độ và dự kiến hoàn thành</h2>
     </header>
 
     <article class="card">
-      <p>Goal cards and simulation controls will be added here.</p>
+      <p>Khu vực này sẽ sớm có thẻ mục tiêu, mô phỏng tốc độ tích lũy và dự kiến về đích.</p>
     </article>
   </section>
 </template>
-

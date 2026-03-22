@@ -38,11 +38,13 @@ class MetricsService:
 
         sts = calculate_sts(all_transactions, now)
         anomaly = calculate_anomaly(all_transactions, now)
+        tar = calculate_tar(all_transactions, now)
         goal_pace, goal_velocity, goal_eta = calculate_goal_pace(all_transactions, all_goals, now)
         fixed_cost_load, runway_months = calculate_operating_metrics(all_transactions, all_rules, now)
         return Summary(
             sts=sts,
             anomaly=anomaly,
+            tar=tar,
             goalPace=goal_pace,
             operatingPosture=OperatingPosture(
                 status=posture_status(sts.progress, fixed_cost_load),
@@ -131,6 +133,46 @@ def calculate_goal_pace(items: list[Transaction], goals_list: list[Goal], now: d
         ),
         compact_currency(int(monthly_velocity)) + "/mo",
         eta,
+    )
+
+
+def calculate_tar(items: list[Transaction], now: datetime) -> MetricValue:
+    month_income = 0
+    month_variable_out = 0
+    month_fixed_out = 0
+    month_goal_transfers = 0
+
+    for item in items:
+        if item.status == "reverted" or item.occurred_at.year != now.year or item.occurred_at.month != now.month:
+            continue
+        if item.type == "IN":
+            month_income += item.amount
+        elif item.type == "OUT":
+            if item.is_fixed:
+                month_fixed_out += item.amount
+            else:
+                month_variable_out += item.amount
+        elif item.type == "TRANSFER":
+            month_goal_transfers += item.amount
+
+    if month_income <= 0:
+        return MetricValue(
+            label="TAR",
+            value="0%",
+            caption="True accumulation rate based on income kept after spending and transfers.",
+            progress=0,
+            status="idle",
+        )
+
+    retained = month_income - month_variable_out - month_fixed_out + month_goal_transfers
+    ratio = retained / month_income
+    progress = min(100, max(0, round(ratio * 100)))
+    return MetricValue(
+        label="TAR",
+        value=f"{int(round(ratio * 100))}%",
+        caption="True accumulation rate based on income kept after spending and transfers.",
+        progress=int(progress),
+        status=status_from_progress(int(progress)),
     )
 
 

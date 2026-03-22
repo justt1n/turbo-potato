@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException
 from app.core.dependencies import (
     get_bootstrapper,
     get_goals_service,
+    get_google_chat_service,
     get_ingestion_service,
     get_metrics_service,
     get_parsed_receipt_review_service,
@@ -104,6 +105,14 @@ def create_fixed_cost_rule(request: CreateFixedCostRuleInput):
 def ingest_chat(request: IngestInput):
     try:
         return get_ingestion_service().ingest_chat(request).model_dump(by_alias=True)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/integrations/google-chat/events")
+def google_chat_event(request: dict):
+    try:
+        return get_google_chat_service().handle_event(request)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
