@@ -26,3 +26,12 @@ class CreateInput(BaseModel):
     start_date: datetime | None = Field(default=None, alias="startDate")
     target_date: datetime | None = Field(default=None, alias="targetDate")
     status: GoalStatus | None = None
+
+
+class UpdateInput(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    target_amount: int = Field(alias="targetAmount")
+    start_date: datetime | None = Field(default=None, alias="startDate")
+    target_date: datetime | None = Field(default=None, alias="targetDate")
+    status: GoalStatus

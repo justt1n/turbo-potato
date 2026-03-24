@@ -3,20 +3,31 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 
 from app.core.dependencies import (
+    get_assets_service,
     get_bootstrapper,
+    get_jars_service,
     get_goals_service,
     get_google_chat_service,
     get_ingestion_service,
+    get_legacy_jar_migration_service,
     get_metrics_service,
     get_parsed_receipt_review_service,
     get_reports_service,
     get_rules_service,
+    get_sources_service,
     get_transaction_service,
 )
+from app.domain.jars.model import CreateInput as CreateJarInput
+from app.domain.jars.model import UpdateInput as UpdateJarInput
 from app.domain.goals.model import CreateInput as CreateGoalInput
+from app.domain.goals.model import UpdateInput as UpdateGoalInput
 from app.domain.ingestion.model import IngestInput, ReviewActionInput, ReviewCorrectInput
+from app.domain.migrations.model import MigrateLegacyJarsInput
 from app.domain.reports.model import GenerateInput
 from app.domain.rules.model import CreateFixedCostRuleInput
+from app.domain.rules.model import UpdateFixedCostRuleInput
+from app.domain.sources.model import CreateInput as CreateSourceInput
+from app.domain.sources.model import UpdateInput as UpdateSourceInput
 from app.domain.transactions.model import CreateInput, UpdateInput
 
 router = APIRouter()
@@ -26,6 +37,38 @@ router = APIRouter()
 def bootstrap() -> dict[str, str]:
     get_bootstrapper().bootstrap()
     return {"status": "bootstrapped"}
+
+
+@router.post("/admin/initialize-system")
+def initialize_system():
+    get_bootstrapper().bootstrap()
+    seeded = get_jars_service().seed_default_jars()
+    return {
+        "status": "initialized",
+        "bootstrapStatus": "bootstrapped",
+        "defaultJars": {
+            "created": seeded.created,
+            "skipped": seeded.skipped,
+            "items": seeded.items,
+        },
+    }
+
+
+@router.post("/admin/seed-default-jars")
+def seed_default_jars():
+    get_bootstrapper().bootstrap()
+    result = get_jars_service().seed_default_jars()
+    return {
+        "created": result.created,
+        "skipped": result.skipped,
+        "items": result.items,
+    }
+
+
+@router.post("/admin/migrate-legacy-jars")
+def migrate_legacy_jars(request: MigrateLegacyJarsInput):
+    get_bootstrapper().bootstrap()
+    return get_legacy_jar_migration_service().migrate_legacy_jars(request.dry_run).model_dump(by_alias=True)
 
 
 @router.get("/dashboard/summary")
@@ -88,6 +131,61 @@ def create_goal(request: CreateGoalInput):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+@router.put("/goals/{goal_name}")
+def update_goal(goal_name: str, request: UpdateGoalInput):
+    try:
+        return get_goals_service().update(goal_name, request).model_dump(by_alias=True)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/jars")
+def list_jars():
+    return {"items": [item.model_dump(by_alias=True) for item in get_jars_service().list()]}
+
+
+@router.post("/jars", status_code=201)
+def create_jar(request: CreateJarInput):
+    try:
+        return get_jars_service().create(request).model_dump(by_alias=True)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.put("/jars/{jar_code}")
+def update_jar(jar_code: str, request: UpdateJarInput):
+    try:
+        return get_jars_service().update(jar_code, request).model_dump(by_alias=True)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/assets/overview")
+def assets_overview():
+    return get_assets_service().overview().model_dump(by_alias=True)
+
+
+@router.get("/sources")
+def list_sources():
+    return {"items": [item.model_dump(by_alias=True) for item in get_sources_service().list()]}
+
+
+@router.post("/sources", status_code=201)
+def create_source(request: CreateSourceInput):
+    try:
+        return get_sources_service().create(request).model_dump(by_alias=True)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.put("/sources/{source_code}")
+def update_source(source_code: str, request: UpdateSourceInput):
+    try:
+        return get_sources_service().update(source_code, request).model_dump(by_alias=True)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 @router.get("/fixed-cost-rules")
 def list_fixed_cost_rules():
     return {"items": [item.model_dump(by_alias=True) for item in get_rules_service().list_fixed_cost_rules()]}
@@ -97,6 +195,14 @@ def list_fixed_cost_rules():
 def create_fixed_cost_rule(request: CreateFixedCostRuleInput):
     try:
         return get_rules_service().create_fixed_cost_rule(request).model_dump(by_alias=True)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.put("/fixed-cost-rules/{rule_name}")
+def update_fixed_cost_rule(rule_name: str, request: UpdateFixedCostRuleInput):
+    try:
+        return get_rules_service().update_fixed_cost_rule(rule_name, request).model_dump(by_alias=True)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

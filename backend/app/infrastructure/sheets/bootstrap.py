@@ -29,6 +29,26 @@ def required_sheets() -> list[SheetSpec]:
             headers=["Goal_Name", "Target_Amount", "Start_Date", "Target_Date", "Status"],
         ),
         SheetSpec(
+            title="Jars",
+            headers=["Jar_Code", "Jar_Name", "Kind", "Opening_Balance", "Actual_Balance", "Is_Active", "Note"],
+        ),
+        SheetSpec(
+            title="Sources",
+            headers=[
+                "Source_Code",
+                "Source_Name",
+                "Kind",
+                "Provider",
+                "Linked_Jar_Code",
+                "Opening_Balance",
+                "Actual_Balance",
+                "Gold_Quantity_Chi",
+                "Gold_Price_Per_Chi",
+                "Is_Active",
+                "Note",
+            ],
+        ),
+        SheetSpec(
             title="NW_Snapshots",
             headers=["Month_Year", "Total_NW", "Liquid_NW", "Created_At"],
         ),

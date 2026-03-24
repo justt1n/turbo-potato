@@ -23,3 +23,13 @@ class CreateFixedCostRuleInput(BaseModel):
     window_end_day: int = Field(alias="windowEndDay")
     linked_jar_code: str = Field(default="", alias="linkedJarCode")
     is_active: bool = Field(alias="isActive")
+
+
+class UpdateFixedCostRuleInput(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    expected_amount: int = Field(alias="expectedAmount")
+    window_start_day: int = Field(alias="windowStartDay")
+    window_end_day: int = Field(alias="windowEndDay")
+    linked_jar_code: str = Field(default="", alias="linkedJarCode")
+    is_active: bool = Field(alias="isActive")

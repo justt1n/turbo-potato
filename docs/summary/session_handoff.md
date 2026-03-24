@@ -64,6 +64,7 @@ Python scaffold:
 - transaction, goal, rule, metrics, ingestion, and reports domain services in `backend/app/domain/`
 - route parity layer in `backend/app/api/routes/app_routes.py`
 - Google Sheets and memory repositories in `backend/app/infrastructure/`
+  - `GoogleParsedReceiptsRepository` now retries empty reads briefly to smooth over Google Sheets read-after-write lag after ingestion
 - Local virtualenv workflow in `backend/.venv`
 - Python packaging and test config in `backend/pyproject.toml`
   - `httpx` is a runtime dependency and must remain in main dependencies for Docker images
@@ -286,6 +287,7 @@ Recent verification additions:
 - parsed receipt confirm/undo API coverage
 - ollama AI client coverage
 - regex-based JSON extraction coverage for ingestion and reports
+- Google Sheets parsed-receipt retry coverage for eventual consistency after ingestion
 
 Archived Go backend tests remain in:
 
@@ -307,6 +309,7 @@ These have passed during this session:
 - backend: `.venv/bin/python -m pytest`
 - frontend: `npm test`
 - frontend: `npm run build`
+- backend: immediate local `ingestion/chat -> parsed-receipts` verification against real Google Sheets config
 
 ## Config notes
 

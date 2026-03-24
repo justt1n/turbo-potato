@@ -10,19 +10,24 @@ from app.domain.ingestion.model import IngestInput
 from app.domain.ingestion.model import ReviewCorrectInput
 from app.domain.ingestion.review_service import ParsedReceiptReviewService
 from app.domain.ingestion.service import IngestionService, parse_suggestion
+from app.domain.jars.service import JarService
 from app.domain.metrics.service import MetricsService
 from app.domain.reports.model import GenerateInput
 from app.domain.reports.service import ReportsService, parse_generated_report
 from app.domain.rules.model import CreateFixedCostRuleInput
 from app.domain.rules.service import RulesService
+from app.domain.sources.model import CreateInput as CreateSourceInput
+from app.domain.sources.service import SourceService
 from app.domain.transactions.model import CreateInput, UpdateInput
 from app.domain.transactions.service import TransactionService
 from app.infrastructure.memory.repositories import (
     MemoryAuditLogger,
     MemoryGoalsRepository,
+    MemoryJarsRepository,
     MemoryParsedReceiptsRepository,
     MemoryReportsRepository,
     MemoryRulesRepository,
+    MemorySourcesRepository,
     MemoryTransactionRepository,
 )
 
@@ -71,14 +76,40 @@ def test_goals_rules_and_metrics_summary() -> None:
     tx_service.create(CreateInput(type="IN", amount=20_000_000, occurredAt=datetime(2026, 3, 10, 9, 0, 0, tzinfo=UTC)))
     tx_service.create(CreateInput(type="TRANSFER", amount=5_000_000, goalName="Mua xe SH", occurredAt=datetime(2026, 3, 12, 9, 0, 0, tzinfo=UTC)))
     goals = GoalService(MemoryGoalsRepository(), clock)
-    goals.create(CreateGoalInput(name="Mua xe SH", targetAmount=100_000_000, startDate=datetime(2026, 1, 1, tzinfo=UTC)))
+    goals.create(
+        CreateGoalInput(
+            name="Mua xe SH",
+            targetAmount=100_000_000,
+            startDate=datetime(2026, 1, 1, tzinfo=UTC),
+            targetDate=datetime(2027, 3, 1, tzinfo=UTC),
+        )
+    )
     rules = RulesService(MemoryRulesRepository())
     rules.create_fixed_cost_rule(CreateFixedCostRuleInput(name="Rent", expectedAmount=5_000_000, windowStartDay=1, windowEndDay=5, isActive=True))
-    summary = MetricsService(tx_service, goals, rules, clock).summary()
-    assert summary.sts.label == "STS Today"
+    sources = SourceService(MemorySourcesRepository())
+    sources.create(
+        CreateSourceInput(code="VCB", name="Vietcombank", kind="bank", actualBalance=30_000_000, openingBalance=30_000_000)
+    )
+    summary = MetricsService(tx_service, goals, rules, sources, clock).summary()
+    assert summary.sts.label == "STS"
     assert summary.tar.label == "TAR"
+    assert summary.tar.value == "88%"
+    assert summary.operating_posture.items[0].value != "0.0 months"
     assert len(summary.baselines) == 3
     assert summary.operating_posture.status
+
+
+def test_default_jars_seed_is_idempotent() -> None:
+    service = JarService(MemoryJarsRepository())
+
+    first = service.seed_default_jars()
+    second = service.seed_default_jars()
+
+    assert first.created == 6
+    assert first.skipped == 0
+    assert second.created == 0
+    assert second.skipped == 6
+    assert len(service.list()) == 6
 
 
 def test_ingestion_and_reports() -> None:
@@ -91,7 +122,7 @@ def test_ingestion_and_reports() -> None:
     result = ingestion.ingest_chat(IngestInput(rawInput="di nhau 500k #team", source="chat"))
     assert result.transaction_id == "TX-001"
     assert receipts.items[0].validation_note
-    metrics = MetricsService(tx_service, goals, rules, clock)
+    metrics = MetricsService(tx_service, goals, rules, SourceService(MemorySourcesRepository()), clock)
     reports = ReportsService(MemoryReportsRepository(), metrics, tx_service, goals, rules, NoopClient(), clock, "UTC", "", "", "", "daily", "monthly")
     snapshot = reports.dashboard()
     assert snapshot.daily.kind == "daily"

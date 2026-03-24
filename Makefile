@@ -3,7 +3,7 @@ APP_HOST ?= 0.0.0.0
 APP_PORT ?= 8080
 APP_CONFIG_FILE ?= $(ROOT_DIR)/config/local.yaml
 
-.PHONY: test test-backend fmt-backend run-backend run-backend-local print-config docker-build docker-up docker-down
+.PHONY: test test-backend fmt-backend run-backend run-backend-local print-config docker-build docker-up docker-down install-git-hooks check-secrets
 
 test: test-backend
 
@@ -32,3 +32,11 @@ docker-up:
 
 docker-down:
 	docker compose down
+
+install-git-hooks:
+	git config core.hooksPath .githooks
+	chmod +x .githooks/pre-commit scripts/check_staged_secrets.py
+	@echo "Installed git hooks at .githooks"
+
+check-secrets:
+	./scripts/check_staged_secrets.py --all-files

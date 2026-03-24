@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from app.domain.jars.model import Jar
 from app.domain.goals.model import Goal
 from app.domain.ingestion.model import ParsedReceipt
 from app.domain.reports.model import Report
 from app.domain.rules.model import FixedCostRule
+from app.domain.sources.model import Source
 from app.domain.transactions.model import AuditEntry, Transaction
 
 
@@ -48,7 +50,52 @@ class MemoryGoalsRepository:
         self.items.append(goal)
         return goal
 
+    def update_goal(self, current_name: str, goal: Goal) -> Goal:
+        for index, item in enumerate(self.items):
+            if item.name == current_name:
+                self.items[index] = goal
+                return goal
+        raise ValueError(f"goal {current_name} not found")
+
     def list_goals(self) -> list[Goal]:
+        return list(self.items)
+
+
+class MemoryJarsRepository:
+    def __init__(self) -> None:
+        self.items: list[Jar] = []
+
+    def create_jar(self, jar: Jar) -> Jar:
+        self.items.append(jar)
+        return jar
+
+    def update_jar(self, current_code: str, jar: Jar) -> Jar:
+        for index, item in enumerate(self.items):
+            if item.code == current_code:
+                self.items[index] = jar
+                return jar
+        raise ValueError(f"jar {current_code} not found")
+
+    def list_jars(self) -> list[Jar]:
+        return list(self.items)
+
+
+class MemorySourcesRepository:
+    def __init__(self) -> None:
+        self.items: list[Source] = []
+
+    def create_source(self, source: Source) -> Source:
+        self.items.append(source)
+        return source
+
+    def update_source(self, current_code: str, source: Source) -> Source:
+        for index, item in enumerate(self.items):
+            if item.code == current_code:
+                self.items[index] = source
+                return source
+        raise ValueError(f"source {current_code} not found")
+
+    def list_sources(self) -> list[Source]:
         return list(self.items)
 
 
@@ -59,6 +106,13 @@ class MemoryRulesRepository:
     def create_fixed_cost_rule(self, rule: FixedCostRule) -> FixedCostRule:
         self.items.append(rule)
         return rule
+
+    def update_fixed_cost_rule(self, current_name: str, rule: FixedCostRule) -> FixedCostRule:
+        for index, item in enumerate(self.items):
+            if item.name == current_name:
+                self.items[index] = rule
+                return rule
+        raise ValueError(f"fixed cost rule {current_name} not found")
 
     def list_fixed_cost_rules(self) -> list[FixedCostRule]:
         return list(self.items)

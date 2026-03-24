@@ -133,3 +133,16 @@ def test_required_sheets_include_reports_and_parsed_receipts_headers() -> None:
         "Trigger",
         "Created_At",
     ]
+    assert specs["Sources"] == [
+        "Source_Code",
+        "Source_Name",
+        "Kind",
+        "Provider",
+        "Linked_Jar_Code",
+        "Opening_Balance",
+        "Actual_Balance",
+        "Gold_Quantity_Chi",
+        "Gold_Price_Per_Chi",
+        "Is_Active",
+        "Note",
+    ]

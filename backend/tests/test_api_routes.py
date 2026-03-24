@@ -15,7 +15,10 @@ def _client() -> TestClient:
 
 def test_bootstrap_and_transactions_and_goals_flow() -> None:
     client = _client()
-    assert client.post("/api/v1/admin/bootstrap").status_code == 200
+    initialized = client.post("/api/v1/admin/initialize-system")
+    assert initialized.status_code == 200
+    assert initialized.json()["status"] == "initialized"
+    assert initialized.json()["defaultJars"]["created"] == 6
     tx = client.post(
         "/api/v1/transactions",
         json={"type": "OUT", "amount": 500000, "currency": "VND", "jarCode": "HuongThu", "note": "manual"},
@@ -31,6 +34,70 @@ def test_bootstrap_and_transactions_and_goals_flow() -> None:
         json={"name": "Rent", "expectedAmount": 5000000, "windowStartDay": 1, "windowEndDay": 5, "isActive": True},
     )
     assert rules.status_code == 201
+    updated_goal = client.put(
+        "/api/v1/goals/Mua%20xe%20SH",
+        json={"targetAmount": 120000000, "startDate": goal.json()["startDate"], "status": "paused"},
+    )
+    assert updated_goal.status_code == 200
+    assert updated_goal.json()["targetAmount"] == 120000000
+    assert updated_goal.json()["status"] == "paused"
+    updated_rule = client.put(
+        "/api/v1/fixed-cost-rules/Rent",
+        json={"expectedAmount": 5500000, "windowStartDay": 1, "windowEndDay": 7, "linkedJarCode": "NhaO", "isActive": True},
+    )
+    assert updated_rule.status_code == 200
+    assert updated_rule.json()["expectedAmount"] == 5500000
+    assert updated_rule.json()["linkedJarCode"] == "NhaO"
+    jar = client.post(
+        "/api/v1/jars",
+        json={"code": "QuyRieng", "name": "Quy rieng", "kind": "wallet", "openingBalance": 5000000, "actualBalance": 5200000, "isActive": True},
+    )
+    assert jar.status_code == 201
+    updated_jar = client.put(
+        "/api/v1/jars/QuyRieng",
+        json={"name": "Quy rieng chinh", "kind": "wallet", "openingBalance": 5000000, "actualBalance": 5300000, "isActive": True, "note": "reconciled"},
+    )
+    assert updated_jar.status_code == 200
+    assert updated_jar.json()["actualBalance"] == 5300000
+    source = client.post(
+        "/api/v1/sources",
+        json={
+            "code": "VCB_Main",
+            "name": "VCB Main",
+            "kind": "bank_account",
+            "provider": "Vietcombank",
+            "linkedJarCode": "QuyRieng",
+            "openingBalance": 10000000,
+            "actualBalance": 12000000,
+            "isActive": True,
+        },
+    )
+    assert source.status_code == 201
+    updated_source = client.put(
+        "/api/v1/sources/VCB_Main",
+        json={
+            "name": "VCB Main Payroll",
+            "kind": "bank_account",
+            "provider": "Vietcombank",
+            "linkedJarCode": "QuyRieng",
+            "openingBalance": 10000000,
+            "actualBalance": 12500000,
+            "goldQuantityChi": 0,
+            "goldPricePerChi": 0,
+            "isActive": True,
+            "note": "salary account",
+        },
+    )
+    assert updated_source.status_code == 200
+    assert updated_source.json()["actualBalance"] == 12500000
+    assets = client.get("/api/v1/assets/overview")
+    assert assets.status_code == 200
+    assert assets.json()["items"][0]["code"] == "VCB_Main"
+    assert any(item["jarCode"] == "QuyRieng" for item in assets.json()["jarTotals"])
+    rerun_initialize = client.post("/api/v1/admin/initialize-system")
+    assert rerun_initialize.status_code == 200
+    assert rerun_initialize.json()["defaultJars"]["created"] == 0
+    assert rerun_initialize.json()["defaultJars"]["skipped"] == 6
 
 
 def test_dashboard_and_ingestion_routes() -> None:
@@ -58,6 +125,81 @@ def test_dashboard_and_ingestion_routes() -> None:
     assert reports.status_code == 200
     monthly = client.post("/api/v1/dashboard/reports/monthly", json={"trigger": "manual"})
     assert monthly.status_code == 201
+
+
+def test_gold_source_uses_quantity_and_price_for_actual_balance() -> None:
+    client = _client()
+    source = client.post(
+        "/api/v1/sources",
+        json={
+            "code": "Gold_SJC",
+            "name": "Vang SJC",
+            "kind": "gold",
+            "provider": "SJC",
+            "goldQuantityChi": 3.5,
+            "goldPricePerChi": 9200000,
+            "isActive": True,
+        },
+    )
+
+    assert source.status_code == 201
+    assert source.json()["actualBalance"] == 32200000
+
+    assets = client.get("/api/v1/assets/overview")
+    assert assets.status_code == 200
+    assert assets.json()["items"][0]["actualBalance"] == 32200000
+    assert assets.json()["totalActualBalance"] == 32200000
+
+
+def test_migrate_legacy_jars_creates_sources_without_touching_bucket_jars() -> None:
+    client = _client()
+
+    legacy = client.post(
+        "/api/v1/jars",
+        json={
+            "code": "Cash_Desk",
+            "name": "Tien mat ban lam viec",
+            "kind": "cash",
+            "openingBalance": 2000000,
+            "actualBalance": 2300000,
+            "isActive": True,
+        },
+    )
+    assert legacy.status_code == 201
+
+    bucket = client.post(
+        "/api/v1/jars",
+        json={
+            "code": "ThietYeu",
+            "name": "Hu thiet yeu",
+            "kind": "bucket",
+            "openingBalance": 0,
+            "actualBalance": 0,
+            "isActive": True,
+        },
+    )
+    assert bucket.status_code == 201
+
+    preview = client.post("/api/v1/admin/migrate-legacy-jars", json={"dryRun": True})
+    assert preview.status_code == 200
+    assert preview.json()["dryRun"] is True
+    assert preview.json()["candidates"] == 1
+    assert preview.json()["items"][0]["status"] == "would_create"
+
+    migrated = client.post("/api/v1/admin/migrate-legacy-jars", json={"dryRun": False})
+    assert migrated.status_code == 200
+    assert migrated.json()["created"] == 1
+
+    sources = client.get("/api/v1/sources")
+    assert sources.status_code == 200
+    assert len(sources.json()["items"]) == 1
+    assert sources.json()["items"][0]["code"] == "Cash_Desk"
+    assert sources.json()["items"][0]["kind"] == "cash_box"
+
+    rerun = client.post("/api/v1/admin/migrate-legacy-jars", json={"dryRun": False})
+    assert rerun.status_code == 200
+    assert rerun.json()["created"] == 0
+    assert rerun.json()["skipped"] == 1
 
 
 def test_parsed_receipt_detail_returns_404_for_unknown_id() -> None:

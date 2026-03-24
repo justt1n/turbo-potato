@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+import time
 from datetime import datetime
 
+from app.domain.jars.model import Jar
 from app.domain.goals.model import Goal
 from app.domain.ingestion.model import ParsedReceipt
 from app.domain.reports.model import Report
 from app.domain.rules.model import FixedCostRule
+from app.domain.sources.model import Source
 from app.domain.transactions.model import AuditEntry, Transaction
 from app.infrastructure.sheets.types import ValuesAPI
 
@@ -17,6 +20,12 @@ def _stringify(value: object) -> str:
     if value is None:
         return ""
     return str(value)
+
+
+def _cell(row: list[object], index: int) -> object:
+    if index < len(row):
+        return row[index]
+    return ""
 
 
 class GoogleTransactionRepository:
@@ -70,6 +79,19 @@ class GoogleGoalsRepository:
         self._client.append(self._spreadsheet_id, "Goals!A:E", [[goal.name, goal.target_amount, goal.start_date.isoformat(), target_date, goal.status]])
         return goal
 
+    def update_goal(self, current_name: str, goal: Goal) -> Goal:
+        rows = self._client.get(self._spreadsheet_id, "Goals!A2:E")
+        target_date = goal.target_date.isoformat() if goal.target_date else ""
+        for index, row in enumerate(rows, start=2):
+            if row and _stringify(row[0]) == current_name:
+                self._client.update(
+                    self._spreadsheet_id,
+                    f"Goals!A{index}:E{index}",
+                    [[goal.name, goal.target_amount, goal.start_date.isoformat(), target_date, goal.status]],
+                )
+                return goal
+        raise ValueError(f"goal {current_name} not found")
+
     def list_goals(self) -> list[Goal]:
         rows = self._client.get(self._spreadsheet_id, "Goals!A2:E")
         out: list[Goal] = []
@@ -88,6 +110,51 @@ class GoogleGoalsRepository:
         return out
 
 
+class GoogleJarsRepository:
+    def __init__(self, client: ValuesAPI, spreadsheet_id: str) -> None:
+        self._client = client
+        self._spreadsheet_id = spreadsheet_id
+
+    def create_jar(self, jar: Jar) -> Jar:
+        self._client.append(
+            self._spreadsheet_id,
+            "Jars!A:G",
+            [[jar.code, jar.name, jar.kind, jar.opening_balance, jar.actual_balance, jar.is_active, jar.note]],
+        )
+        return jar
+
+    def update_jar(self, current_code: str, jar: Jar) -> Jar:
+        rows = self._client.get(self._spreadsheet_id, "Jars!A2:G")
+        for index, row in enumerate(rows, start=2):
+            if row and _stringify(row[0]) == current_code:
+                self._client.update(
+                    self._spreadsheet_id,
+                    f"Jars!A{index}:G{index}",
+                    [[jar.code, jar.name, jar.kind, jar.opening_balance, jar.actual_balance, jar.is_active, jar.note]],
+                )
+                return jar
+        raise ValueError(f"jar {current_code} not found")
+
+    def list_jars(self) -> list[Jar]:
+        rows = self._client.get(self._spreadsheet_id, "Jars!A2:G")
+        out: list[Jar] = []
+        for row in rows:
+            if not row:
+                continue
+            out.append(
+                Jar(
+                    code=_stringify(_cell(row, 0)),
+                    name=_stringify(_cell(row, 1)),
+                    kind=_stringify(_cell(row, 2)) or "cash",
+                    openingBalance=int(_stringify(_cell(row, 3)) or 0),
+                    actualBalance=int(_stringify(_cell(row, 4)) or 0),
+                    isActive=_stringify(_cell(row, 5)).lower() == "true",
+                    note=_stringify(_cell(row, 6)),
+                )
+            )
+        return out
+
+
 class GoogleRulesRepository:
     def __init__(self, client: ValuesAPI, spreadsheet_id: str) -> None:
         self._client = client
@@ -100,6 +167,18 @@ class GoogleRulesRepository:
             [[rule.name, rule.expected_amount, rule.window_start_day, rule.window_end_day, rule.linked_jar_code, rule.is_active]],
         )
         return rule
+
+    def update_fixed_cost_rule(self, current_name: str, rule: FixedCostRule) -> FixedCostRule:
+        rows = self._client.get(self._spreadsheet_id, "Fixed_Cost_Rules!A2:F")
+        for index, row in enumerate(rows, start=2):
+            if row and _stringify(row[0]) == current_name:
+                self._client.update(
+                    self._spreadsheet_id,
+                    f"Fixed_Cost_Rules!A{index}:F{index}",
+                    [[rule.name, rule.expected_amount, rule.window_start_day, rule.window_end_day, rule.linked_jar_code, rule.is_active]],
+                )
+                return rule
+        raise ValueError(f"fixed cost rule {current_name} not found")
 
     def list_fixed_cost_rules(self) -> list[FixedCostRule]:
         rows = self._client.get(self._spreadsheet_id, "Fixed_Cost_Rules!A2:F")
@@ -120,7 +199,83 @@ class GoogleRulesRepository:
         return out
 
 
+class GoogleSourcesRepository:
+    def __init__(self, client: ValuesAPI, spreadsheet_id: str) -> None:
+        self._client = client
+        self._spreadsheet_id = spreadsheet_id
+
+    def create_source(self, source: Source) -> Source:
+        self._client.append(
+            self._spreadsheet_id,
+            "Sources!A:K",
+            [[
+                source.code,
+                source.name,
+                source.kind,
+                source.provider,
+                source.linked_jar_code,
+                source.opening_balance,
+                source.actual_balance,
+                source.gold_quantity_chi,
+                source.gold_price_per_chi,
+                source.is_active,
+                source.note,
+            ]],
+        )
+        return source
+
+    def update_source(self, current_code: str, source: Source) -> Source:
+        rows = self._client.get(self._spreadsheet_id, "Sources!A2:K")
+        for index, row in enumerate(rows, start=2):
+            if row and _stringify(row[0]) == current_code:
+                self._client.update(
+                    self._spreadsheet_id,
+                    f"Sources!A{index}:K{index}",
+                    [[
+                        source.code,
+                        source.name,
+                        source.kind,
+                        source.provider,
+                        source.linked_jar_code,
+                        source.opening_balance,
+                        source.actual_balance,
+                        source.gold_quantity_chi,
+                        source.gold_price_per_chi,
+                        source.is_active,
+                        source.note,
+                    ]],
+                )
+                return source
+        raise ValueError(f"source {current_code} not found")
+
+    def list_sources(self) -> list[Source]:
+        rows = self._client.get(self._spreadsheet_id, "Sources!A2:K")
+        out: list[Source] = []
+        for row in rows:
+            if not row:
+                continue
+            out.append(
+                Source(
+                    code=_stringify(_cell(row, 0)),
+                    name=_stringify(_cell(row, 1)),
+                    kind=_stringify(_cell(row, 2)) or "wallet",
+                    provider=_stringify(_cell(row, 3)),
+                    linkedJarCode=_stringify(_cell(row, 4)),
+                    openingBalance=int(_stringify(_cell(row, 5)) or 0),
+                    actualBalance=int(_stringify(_cell(row, 6)) or 0),
+                    goldQuantityChi=float(_stringify(_cell(row, 7)) or 0),
+                    goldPricePerChi=int(_stringify(_cell(row, 8)) or 0),
+                    isActive=_stringify(_cell(row, 9)).lower() == "true",
+                    note=_stringify(_cell(row, 10)),
+                )
+            )
+        return out
+
+
 class GoogleParsedReceiptsRepository:
+    _read_attempts = 3
+    _read_delay_seconds = 0.2
+
     def __init__(self, client: ValuesAPI, spreadsheet_id: str) -> None:
         self._client = client
         self._spreadsheet_id = spreadsheet_id
@@ -134,7 +289,7 @@ class GoogleParsedReceiptsRepository:
         return receipt
 
     def list_parsed_receipts(self) -> list[ParsedReceipt]:
-        rows = self._client.get(self._spreadsheet_id, "Parsed_Receipts!A2:K")
+        rows = self._load_rows()
         return [parsed_receipt_from_row(row) for row in rows if row]
 
     def get_parsed_receipt(self, receipt_id: str) -> ParsedReceipt:
@@ -142,6 +297,15 @@ class GoogleParsedReceiptsRepository:
             if item.id == receipt_id:
                 return item
         raise ValueError(f"parsed receipt {receipt_id} not found")
+
+    def _load_rows(self) -> list[list[object]]:
+        rows: list[list[object]] = []
+        for attempt in range(self._read_attempts):
+            rows = self._client.get(self._spreadsheet_id, "Parsed_Receipts!A2:K")
+            if rows or attempt == self._read_attempts - 1:
+                return rows
+            time.sleep(self._read_delay_seconds)
+        return rows
 
 
 class GoogleReportsRepository:
