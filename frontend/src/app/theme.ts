@@ -13,16 +13,16 @@ export interface ThemePalette {
 
 export const palettes = {
   springRadar: {
-    background: "#F0FFDF",
-    surface: "#FFFFFF",
-    surfaceAlt: "#F6FFE9",
-    line: "rgba(36, 49, 39, 0.12)",
-    text: "#1E2A20",
-    textMuted: "#5E695F",
-    accent: "#A8DF8E",
-    accentSoft: "#F0FFDF",
-    dangerSoft: "#FFD8DF",
-    danger: "#FFAAB8",
+    background: "#F4EFE6",
+    surface: "#FFFDF8",
+    surfaceAlt: "#F7F0E6",
+    line: "rgba(20, 33, 38, 0.12)",
+    text: "#142126",
+    textMuted: "#65747A",
+    accent: "#3D9B8A",
+    accentSoft: "#DCEFE8",
+    dangerSoft: "#F6D8CF",
+    danger: "#DE7D67",
   },
 } satisfies Record<string, ThemePalette>;
 
@@ -43,4 +43,3 @@ export function applyPalette(name: PaletteName): void {
   root.style.setProperty("--tp-danger-soft", palette.dangerSoft);
   root.style.setProperty("--tp-danger", palette.danger);
 }
-

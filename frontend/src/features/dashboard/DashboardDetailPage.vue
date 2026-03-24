@@ -148,25 +148,25 @@ const metricCards = computed(() => {
       ...summary.value.sts,
       displayLabel: metricLabel(summary.value.sts.label),
       description:
-        "STS là mức chi an toàn mỗi ngày cho phần còn lại của tháng này. Càng cao thì càng dễ thở, càng thấp thì áp lực tháng càng lớn.",
+        "STS là mức chi linh hoạt an toàn mỗi ngày còn lại sau khi lấy thu nhập nền gần đây trừ chi phí cố định và phần cần dành cho mục tiêu.",
     },
     {
       ...summary.value.anomaly,
       displayLabel: metricLabel(summary.value.anomaly.label),
       description:
-        "Anomaly so sánh chi tiêu linh hoạt hiện tại với lịch sử gần đây. Điểm càng cao thì ngày hôm nay càng lệch khỏi nhịp thông thường.",
+        "Anomaly dùng robust z-score trên chi tiêu theo ngày của 60 ngày gần đây để đo xem hôm nay lệch khỏi nhịp thường đến đâu.",
     },
     {
       ...summary.value.tar,
       displayLabel: metricLabel(summary.value.tar.label),
       description:
-        "TAR cho biết bạn giữ lại được bao nhiêu thu nhập của tháng sau khi trừ chi tiêu và dòng tiền vào mục tiêu. Đây là tín hiệu chất lượng tích lũy.",
+        "TAR ở dashboard này nên hiểu là tỷ lệ tiết kiệm ròng: thu nhập tháng trừ chi tiêu thực tế rồi chia cho thu nhập, không cộng đúp các khoản chuyển nội bộ.",
     },
     {
       ...summary.value.goalPace,
       displayLabel: metricLabel(summary.value.goalPace.label),
       description:
-        "Tốc độ mục tiêu cho biết bạn đang đi tới mục tiêu nhanh đến đâu. Chỉ số này kết hợp tiến độ hiện tại, tốc độ chuyển tiền gần đây và thời điểm dự kiến.",
+        "Tốc độ mục tiêu so sánh vận tốc nạp tiền 90 ngày gần đây với vận tốc cần có để kịp đích của mục tiêu đang active.",
     },
   ];
 });
@@ -239,11 +239,11 @@ function detailStatusText(series: { label: string; values: number[] }): string {
 function metricLabel(label: string): string {
   switch (label) {
     case "Goal Pace":
-      return "Tốc độ mục tiêu";
+      return "Mức bám tiến độ mục tiêu";
     case "Anomaly":
-      return "Bất thường";
+      return "Lệch nhịp chi tiêu";
     case "TAR":
-      return "TAR";
+      return "Tỷ lệ tiết kiệm ròng";
     case "STS":
       return "STS";
     default:

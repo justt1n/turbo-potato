@@ -25,17 +25,17 @@
 
           <label>
             <span>Mã hũ</span>
-            <input v-model.trim="form.jarCode" placeholder="HuongThu" />
+            <input v-model.trim="form.jarCode" list="jar-options" placeholder="HuongThu" />
           </label>
 
           <label>
             <span>Tên mục tiêu</span>
-            <input v-model.trim="form.goalName" placeholder="Mua xe SH" />
+            <input v-model.trim="form.goalName" list="goal-options" placeholder="Mua xe SH" />
           </label>
 
           <label>
             <span>Tài khoản</span>
-            <input v-model.trim="form.accountName" placeholder="Ví" />
+            <input v-model.trim="form.accountName" list="source-options" placeholder="VCB_Main" />
           </label>
 
           <label>
@@ -52,6 +52,22 @@
             {{ mutation.isPending.value ? "Đang lưu..." : "Tạo giao dịch" }}
           </button>
         </form>
+
+        <datalist id="jar-options">
+          <option v-for="jar in jarsQuery.data.value?.items ?? []" :key="jar.code" :value="jar.code">
+            {{ jar.name }}
+          </option>
+        </datalist>
+
+        <datalist id="goal-options">
+          <option v-for="goal in goalsQuery.data.value?.items ?? []" :key="goal.name" :value="goal.name" />
+        </datalist>
+
+        <datalist id="source-options">
+          <option v-for="source in sourcesQuery.data.value?.items ?? []" :key="source.code" :value="source.code">
+            {{ source.name }}
+          </option>
+        </datalist>
 
         <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
       </article>
@@ -85,9 +101,14 @@
 
 <script setup lang="ts">
 import { reactive, ref } from "vue";
-import { useMutation, useQuery } from "@tanstack/vue-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
+import { listGoals } from "@/api/goals";
+import { listJars } from "@/api/jars";
+import { listSources } from "@/api/sources";
 import { createTransaction, listTransactions } from "@/api/transactions";
 import { formatCurrency } from "@/lib/formatCurrency";
+
+const queryClient = useQueryClient();
 
 const defaultForm = () => ({
   type: "OUT" as const,
@@ -109,12 +130,32 @@ const query = useQuery({
   queryFn: listTransactions,
 });
 
+const jarsQuery = useQuery({
+  queryKey: ["jars"],
+  queryFn: listJars,
+});
+
+const goalsQuery = useQuery({
+  queryKey: ["goals"],
+  queryFn: listGoals,
+});
+
+const sourcesQuery = useQuery({
+  queryKey: ["sources"],
+  queryFn: listSources,
+});
+
 const mutation = useMutation({
   mutationFn: createTransaction,
   onSuccess: async () => {
     Object.assign(form, defaultForm());
     errorMessage.value = "";
-    await query.refetch();
+    await Promise.all([
+      query.refetch(),
+      queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] }),
+      queryClient.invalidateQueries({ queryKey: ["dashboard-reports"] }),
+      queryClient.invalidateQueries({ queryKey: ["assets-overview"] }),
+    ]);
   },
   onError: (error) => {
     errorMessage.value = error instanceof Error ? error.message : "Tạo giao dịch thất bại";
